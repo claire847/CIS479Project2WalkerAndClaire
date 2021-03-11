@@ -1,3 +1,5 @@
+//Claire Hofmann & Walker Bass CIS-479 P2
+
 #include <iostream>
 #include <iomanip>
 using namespace std;
@@ -27,15 +29,9 @@ int maze[ROWS][COLS] =
 
 //Matrix of probabilities
 float probs[ROWS][COLS];
-//{   { -1, -1, -1, -1, -1, -1, -1, -1, -1},
-//	{ -1,0.0085,0.0063,0.0346,0.0346,0.0078,0.033,0.0223,-1 },
-//	{ -1,0.017,-1,0.0722,0.0722,-1,0.0722,0.0201,-1 },
-//	{ -1,0.0063,00.143,0.025,0.025,0.0208,0.0185,0.0266,-1 },
-//	{ -1,0.017,-1,0.0722,0.0722,-1,0.0722,0.0201,-1 },
-//	{ -1,0.0078,0.0426,0.0266,0.0266,0.0491,0.0201,0.0143,-1 },
-//	{ -1,0.0025,0.0025,0.004,0.004,0.004,0.0025,0.0025,-1 },
-//	{ -1,-1,-1,-1,-1,-1,-1,-1,-1 },
-//};
+
+//Temporary matrix
+float motionPuzzle[ROWS][COLS];
 
 float sensingCalculation(int evidence[4], int row, int col)
 {
@@ -149,13 +145,26 @@ float sensingCalculation(int evidence[4], int row, int col)
 		}
 	}
 
-	//cout << "EVIDENCE: " << evidence[0] << evidence[1] << evidence[2] << evidence[3] << "(" << row << ", " << col << "): " << result << endl;
 	return result;
 }
 
 //Use evidence conditional probability P(Zt|St)
 void sensing(int evidence[4])
 {
+	float denominator = 0;
+
+	//Calculates denominator
+	for (int r = 0; r < ROWS; r++)
+	{
+		for (int c = 0; c < COLS; c++)
+		{
+			if (maze[r][c] != 1)
+			{
+				denominator += sensingCalculation(evidence, r, c) * probs[r][c];
+			}
+		}
+	}
+
 	for (int row = 0; row < ROWS; row++)
 	{
 		for (int col = 0; col < COLS; col++)
@@ -165,26 +174,7 @@ void sensing(int evidence[4])
 			{
 				float currentProbabilty = probs[row][col];
 				float numerator = sensingCalculation(evidence, row, col)*currentProbabilty;
-				float denominator = 0;
-
-				for (int r = 0; r < ROWS; r++) 
-				{
-					for (int c = 0; c < COLS; c++)
-					{
-						if (r != row || c != col)
-						{
-							if (maze[r][c] != 1)
-							{
-								denominator += sensingCalculation(evidence, r, c);
-								//cout << "EVIDENCE: " << evidence[0] << evidence[1] << evidence[2] << evidence[3] << "(" << r << ", " << c << ")" << endl;
-							}
-						}
-					}
-				}
-
-				//cout << "NUM: " << numerator << "  DENOM: " << denominator << endl;
-				denominator = denominator * currentProbabilty;// / 38.0;
-				float result = numerator / (numerator + denominator);
+				float result = numerator / denominator;
 
 				probs[row][col] = result;
 			}
@@ -195,9 +185,118 @@ void sensing(int evidence[4])
 
 
 //Use transition probability P(St|St-1)
-void motion()
+void motion(int direction)
 {
+	for (int row = 0; row < ROWS; row++)
+	{
+		for (int col = 0; col < COLS; col++)
+		{
+			if (maze[row][col] != 1)
+			{
+				float total = 0.0;
+				//north
+				if (direction == 1)
+				{
+					//checking west
+					if (maze[row][col - 1] != 1)
+					{
+						total += probs[row][col - 1]  * 0.1;
+					}
+					else
+					{
+						total += probs[row][col] * 0.1;
+					}
 
+					//checking north
+					if (maze[row - 1][col] != 1)
+					{
+						total += probs[row - 1][col] * 0;
+					}
+					else
+					{
+						total += probs[row][col] * 0.8;
+					}
+
+					//checking east
+					if (maze[row][col + 1] != 1)
+					{
+						total += probs[row][col + 1] * 0.1;
+					}
+					else
+					{
+						total += probs[row][col] * 0.1;
+					}
+
+					//checking south
+					if (maze[row + 1][col] != 1)
+					{
+						total += probs[row + 1][col] * 0.8;
+					}
+					else
+					{
+						total += probs[row][col] * 0;
+					}
+				}
+
+				//west
+				else if (direction == 0)
+				{
+					//checking west
+					if (maze[row][col - 1] != 1)
+					{
+						total += probs[row][col - 1] * 0;
+					}
+					else
+					{
+						total += probs[row][col] * 0.8;
+					}
+
+					//checking north
+					if (maze[row - 1][col] != 1)
+					{
+						total += probs[row - 1][col] * 0.1;
+					}
+					else
+					{
+						total += probs[row][col] * 0.1;
+					}
+
+					//checking east
+					if (maze[row][col + 1] != 1)
+					{
+						total += probs[row][col + 1] * 0.8;
+					}
+					else
+					{
+						total += probs[row][col] * 0;
+					}
+
+					//checking south
+					if (maze[row + 1][col] != 1)
+					{
+						total += probs[row + 1][col] * 0.1;
+					}
+					else
+					{
+						total += probs[row][col] * 0.1;
+					}
+				}
+				motionPuzzle[row][col] = total;
+			}
+			else
+			{
+				motionPuzzle[row][col] = -1;
+			}
+		}
+	}
+
+	for (int r = 0; r < ROWS; r++)
+	{
+		for (int c = 0; c < COLS; c++)
+		{
+			probs[r][c] = motionPuzzle[r][c];
+		}
+	}
 }
 
 void printPuzzle(float puzzle[ROWS][COLS])
@@ -207,9 +306,9 @@ void printPuzzle(float puzzle[ROWS][COLS])
 		for (int col = 0; col < COLS; col++)
 		{
 			if (puzzle[row][col] == -1)
-				cout << "#### ";
+				cout << "##### ";
 			else
-				cout << setprecision(2) << fixed << puzzle[row][col]*100.0 << " ";
+				cout << setprecision(2) << fixed << puzzle[row][col]*100.0 << "  ";
 		}
 
 		cout << endl;
@@ -233,17 +332,53 @@ int main()
 			}
 		}
 	}
-
 	printPuzzle(probs);
 	cout << endl;
 
-	/*int s1[4] = { 1,0,0,0 };
-	sensing(s1);*/
-
 	int s1[4] = { 0, 0, 0, 0 };
 	sensing(s1);
-
 	printPuzzle(probs);
+	cout << endl;
+
+	//1 = north
+	motion(1);
+	printPuzzle(probs);
+	cout << endl;
+
+	int s2[4] = { 1,0,0,0 };
+	sensing(s2);
+	printPuzzle(probs);
+	cout << endl;
+
+	//1 = north
+	motion(1);
+	printPuzzle(probs);
+	cout << endl;
+
+	int s3[4] = { 0,0,0,0 };
+	sensing(s3);
+	printPuzzle(probs);
+	cout << endl;
+
+	//0 = west
+	motion(0);
+	printPuzzle(probs);
+	cout << endl;
+
+	int s4[4] = { 0,1,0,1 };
+	sensing(s4);
+	printPuzzle(probs);
+	cout << endl;
+
+	//0 = west
+	motion(0);
+	printPuzzle(probs);
+	cout << endl;
+
+	int s5[4] = { 1,0,0,0 };
+	sensing(s5);
+	printPuzzle(probs);
+	cout << endl;
 
 	return 0;
 }
